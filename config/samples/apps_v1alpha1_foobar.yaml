@@ -1,0 +1,9 @@
+apiVersion: apps.undeadops.xyz/v1alpha1
+kind: FooBar
+metadata:
+  name: rpa-worker
+spec:
+  replicas: 2
+  foo:
+    repository: nginx
+    tag: latest

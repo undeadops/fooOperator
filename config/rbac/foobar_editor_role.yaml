@@ -1,0 +1,24 @@
+# permissions for end users to edit foobars.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: foobar-editor-role
+rules:
+- apiGroups:
+  - apps.undeadops.xyz
+  resources:
+  - foobars
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.undeadops.xyz
+  resources:
+  - foobars/status
+  verbs:
+  - get

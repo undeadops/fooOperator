@@ -1,0 +1,59 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - apps.undeadops.xyz
+  resources:
+  - foobars
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.undeadops.xyz
+  resources:
+  - foobars/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.undeadops.xyz
+  resources:
+  - foobars/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps.undeadops.xyz
+  resources:
+  - foos
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.undeadops.xyz
+  resources:
+  - foos/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.undeadops.xyz
+  resources:
+  - foos/status
+  verbs:
+  - get
+  - patch
+  - update

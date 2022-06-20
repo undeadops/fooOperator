@@ -1,0 +1,25 @@
+domain: undeadops.xyz
+layout:
+- go.kubebuilder.io/v3
+projectName: foooperator
+repo: github.com/undeadops/fooOperator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: undeadops.xyz
+  group: apps
+  kind: FooBar
+  path: github.com/undeadops/fooOperator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: undeadops.xyz
+  group: apps
+  kind: Foo
+  path: github.com/undeadops/fooOperator/api/v1alpha1
+  version: v1alpha1
+version: "3"

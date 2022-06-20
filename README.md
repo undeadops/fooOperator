@@ -1,2 +1,1 @@
-# fooOperator
-Creating a Custom Operator
+# FooOperator
