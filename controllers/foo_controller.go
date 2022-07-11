@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -58,7 +59,7 @@ func (r *FooReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	foo := &appsv1alpha1.Foo{}
 
-	existingPod := &corev1.Pod{}
+	existingDeployment := &appsv1.Deployment{}
 	existingService := &corev1.Service{}
 	existingIngress := &netv1.Ingress{}
 
@@ -72,18 +73,18 @@ func (r *FooReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			log.Info("Foo resource not found, check if a Pod must be deleted.")
 
 			// delete Pod
-			err = r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, existingPod)
+			err = r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, existingDeployment)
 			if err != nil {
 				if errors.IsNotFound(err) {
-					log.Info("Nothing to do, no Foo pod found.")
+					log.Info("Nothing to do, no Foo Deployment found.")
 					return ctrl.Result{}, nil
 				} else {
-					log.Error(err, "❌ Failed to get Foo Pod")
+					log.Error(err, "❌ Failed to get Foo Deployment")
 					return ctrl.Result{}, err
 				}
 			} else {
-				log.Info("☠️ Foo Pod exists: delete it. ☠️")
-				r.Delete(ctx, existingPod)
+				log.Info("☠️ Foo Deployment exists: delete it. ☠️")
+				r.Delete(ctx, existingDeployment)
 			}
 			// delete service
 			err = r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, existingService)
@@ -120,7 +121,7 @@ func (r *FooReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		log.Info("ℹ️  CR state ℹ️", "Foo.Name", foo.Name, " Foo.Namespace", foo.Namespace)
 
 		// Check if the foo already exists, if not: create a new one.
-		err = r.Get(ctx, types.NamespacedName{Name: foo.Name, Namespace: foo.Namespace}, existingPod)
+		err = r.Get(ctx, types.NamespacedName{Name: foo.Name, Namespace: foo.Namespace}, existingDeployment)
 		if err != nil && errors.IsNotFound(err) {
 			// Define a new deployment
 			newFoo := r.createPod(foo)
@@ -135,16 +136,16 @@ func (r *FooReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			log.Info("🔁 Foo exits, update the Foo! 🔁")
 			// Pod exists!
 			// Updates are Replacements!
-			// Delete old Foo
-			r.Delete(ctx, existingPod)
-			// Create new Foo
-			newFoo := r.createPod(foo)
-			err = r.Create(ctx, newFoo)
+			existingDeployment.Spec.Template.Spec.Containers[0].Image = foo.Spec.Pod.Image
+			existingDeployment.Spec.Template.Spec.Containers[0].Env = foo.Spec.Pod.Env
+			existingDeployment.Spec.Template.Spec.Conteiners[0].Resources = foo.Spec.Pod.Resources
+			existingDeployment.Spec.Template.Spec.Containers[0].
+				err = r.Update(ctx, existingDeployment)
 			if err != nil {
-				log.Error(err, "Failed to create replacement Foo", "Foo.Namespace", newFoo.Namespace, "Foo.Name", newFoo.Name)
+				log.Error(err, "Failed to create replacement Foo", "Foo.Namespace", foo.Namespace, "Foo.Name", foo.Name)
 				return ctrl.Result{}, err
 			}
-			log.Info("Replacement Foo Has been Started!", "Foo.Namespace", newFoo.Namespace, "Foo.Name", newFoo.Name)
+			log.Info("Replacement Foo Has been Started!", "Foo.Namespace", foo.Namespace, "Foo.Name", foo.Name)
 
 		} else if err != nil {
 			log.Error(err, "Failed to get Deployment")
@@ -210,10 +211,12 @@ func (r *FooReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // Create Pod Object for Foo
-func (r *FooReconciler) createPod(foo *appsv1alpha1.Foo) *corev1.Pod {
-
+func (r *FooReconciler) createPod(foo *appsv1alpha1.Foo) *appsv1.Deployment {
+	// Changing to create deployment instead of pod, because, updates are easier
 	labels := make(map[string]string)
 	labels["app"] = foo.Name
+	var replicas int32
+	replicas = 1
 
 	// Create Ports Definition
 	var ports []corev1.ContainerPort
@@ -247,24 +250,35 @@ func (r *FooReconciler) createPod(foo *appsv1alpha1.Foo) *corev1.Pod {
 		},
 	}
 
-	pod := &corev1.Pod{
+	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      foo.Name,
 			Namespace: foo.Namespace,
 			Labels:    labels,
 		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{{
-				Image:     foo.Spec.Pod.Image,
-				Name:      "foo",
-				Command:   foo.Spec.Pod.Command,
-				Ports:     ports,
-				Env:       envs,
-				Resources: resources,
-			}},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Image:     foo.Spec.Pod.Image,
+						Name:      "foo",
+						Command:   foo.Spec.Pod.Command,
+						Ports:     ports,
+						Env:       envs,
+						Resources: resources,
+					}},
+				},
+			},
 		},
 	}
-	return pod
+	return deployment
 }
 
 // Create Service Object for Foo
