@@ -136,19 +136,21 @@ spec:
           status:
             description: FooStatus defines the observed state of Foo
             properties:
-              active:
-                description: Pod Name for Foo
+              lastStateChange:
+                format: date-time
                 type: string
-              ingress:
-                description: Ingress Name Created for Service
+              pod:
                 type: string
-              service:
-                description: Service Name Created for Pod
+              podStatus:
+                description: PodPhase is a label for the condition of a pod at the
+                  current time.
+                type: string
+              state:
+                type: string
+              taskId:
                 type: string
             required:
-            - active
-            - ingress
-            - service
+            - lastStateChange
             type: object
         type: object
     served: true

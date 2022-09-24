@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -80,17 +81,11 @@ type PodResourceList struct {
 
 // FooStatus defines the observed state of Foo
 type FooStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Service Name Created for Pod
-	Service string `json:"service"`
-
-	// Ingress Name Created for Service
-	Ingress string `json:"ingress"`
-
-	// Pod Name for Foo
-	Active string `json:"active"`
+	State           string          `json:"state,omitempty"`
+	TaskId          string          `json:"taskId,omitempty"`
+	Pod             string          `json:"pod,omitempty"`
+	PodStatus       corev1.PodPhase `json:"podStatus,omitempty"`
+	LastStateChange metav1.Time     `json:"lastStateChange"`
 }
 
 //+kubebuilder:object:root=true

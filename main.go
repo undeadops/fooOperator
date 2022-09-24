@@ -19,10 +19,15 @@ package main
 import (
 	"flag"
 	"os"
+	"strconv"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
+	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/tools/record"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -32,7 +37,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	appsv1alpha1 "github.com/undeadops/fooOperator/api/v1alpha1"
-	"github.com/undeadops/fooOperator/controllers"
+	"github.com/undeadops/fooOperator/controllers/foo"
+	"github.com/undeadops/fooOperator/controllers/foobar"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -78,16 +84,33 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.FooBarReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	kubeConfig := ctrl.GetConfigOrDie()
+	kubeClient := kubernetes.NewForConfigOrDie(kubeConfig)
+
+	eventBroadcaster := record.NewBroadcasterWithCorrelatorOptions(record.CorrelatorOptions{
+		BurstSize: getEventBurstSize(),
+		QPS:       1,
+	})
+
+	// Start events processing pipeline.
+	eventBroadcaster.StartStructuredLogging(0)
+	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
+	defer eventBroadcaster.Shutdown()
+
+	if err = (&foobar.FooBarReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Log:      ctrl.Log.WithName("controllers").WithName("FooBar"),
+		Recorder: eventBroadcaster.NewRecorder(mgr.GetScheme(), v1.EventSource{Component: "foobar-controller"}),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "FooBar")
 		os.Exit(1)
 	}
-	if err = (&controllers.FooReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&foo.FooReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Log:      ctrl.Log.WithName("controllers").WithName("Foo"),
+		Recorder: eventBroadcaster.NewRecorder(mgr.GetScheme(), v1.EventSource{Component: "foo-controller"}),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Foo")
 		os.Exit(1)
@@ -108,4 +131,22 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// getEventBurstSize returns the burst size of events that can be handled in the cluster
+func getEventBurstSize() int {
+	// EventBurstSizeEnvVar is the constant for env variable EVENT_BURST_SIZE
+	// An empty value means the default burst size which is 150.
+	var eventBurstSizeEnvVar = "EVENT_BURST_SIZE"
+	var eventBurstSize = 150
+	burstSize, found := os.LookupEnv(eventBurstSizeEnvVar)
+	if found {
+		eventBurstSizeInt, err := strconv.Atoi(burstSize)
+		if err != nil {
+			setupLog.Info("Invalid EVENT_BURST_SIZE value: using default 150")
+		} else {
+			eventBurstSize = eventBurstSizeInt
+		}
+	}
+	return eventBurstSize
 }

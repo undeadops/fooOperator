@@ -15,7 +15,23 @@ spec:
     singular: foobar
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Idle Foos
+      jsonPath: .status.idle
+      name: Idle Foos
+      type: integer
+    - description: Active Foos
+      jsonPath: .status.active
+      name: Active Foos
+      type: integer
+    - description: Current Deployment Hash
+      jsonPath: .status.current_hash
+      name: Current Hash
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: FooBar is the Schema for the foobars API
@@ -36,7 +52,7 @@ spec:
             description: FooBarSpec defines the desired state of FooBar
             properties:
               foo:
-                description: Foo Spec for what Foo Workers look like
+                description: FooSpec defines the desired state of Foo
                 properties:
                   ingress:
                     description: FooIngressSpec defines the desired config of our
@@ -139,24 +155,35 @@ spec:
                 - pod
                 type: object
               replicas:
-                description: Replica Worker Count
                 format: int32
                 type: integer
+            required:
+            - foo
             type: object
           status:
             description: FooBarStatus defines the observed state of FooBar
             properties:
               active:
-                description: Active count of Foo Workers
+                format: int32
+                type: integer
+              current_hash:
+                type: string
+              idle:
                 format: int32
                 type: integer
             required:
             - active
+            - current_hash
+            - idle
             type: object
         type: object
     served: true
     storage: true
     subresources:
+      scale:
+        labelSelectorPath: .status.selector
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.replicas
       status: {}
 status:
   acceptedNames:

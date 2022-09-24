@@ -20,32 +20,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // FooBarSpec defines the desired state of FooBar
 type FooBarSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo Spec for what Foo Workers look like
-	Foo FooSpec `json:"foo,omitempty"`
-
-	// Replica Worker Count
-	Replicas int32 `json:"replicas,omitempty"`
+	Replicas int32   `json:"replicas,omitempty"`
+	Foo      FooSpec `json:"foo"`
 }
 
 // FooBarStatus defines the observed state of FooBar
 type FooBarStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Active count of Foo Workers
-	Active int32 `json:"active"`
+	Active      int32  `json:"active"`
+	Idle        int32  `json:"idle"`
+	CurrentHash string `json:"current_hash"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.selector
+//+kubebuilder:printcolumn:name="Idle Foos",type="integer",JSONPath=".status.idle",description="Idle Foos"
+//+kubebuilder:printcolumn:name="Active Foos",type="integer",JSONPath=".status.active",description="Active Foos"
+//+kubebuilder:printcolumn:name="Current Hash",type="string",JSONPath=".status.current_hash",description="Current Deployment Hash"
+//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // FooBar is the Schema for the foobars API
 type FooBar struct {
